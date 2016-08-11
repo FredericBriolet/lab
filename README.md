@@ -11,3 +11,7 @@ Three lines :
 
 Three sphere noise shader : http://fredericbriolet.com/three/noise/ <br/>
 -> based on https://www.clicktorelease.com/blog/vertex-displacement-noise-3d-webgl-glsl-three-js
+
+
+Moon Project - game made with Unity and 3DSMax in MMI first year with 7 students - I made 3D assets and code.
+http://valentinfougeres.com/moonproject/MoonProjectWebV1.html
