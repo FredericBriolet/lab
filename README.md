@@ -1,7 +1,9 @@
 # lab
 Creative research and experiments
 
-Noise shader : http://fredericbriolet.com/three/fluid/ <br/>
+Noise shader : 
+- shader only : http://fredericbriolet.com/three/fluid/
+- shader as texture : http://fredericbriolet.com/three/fluid1/
 -> based on https://www.ibiblio.org/e-notes/webgl/gpu/fluid.htm
 
 Three lines : 
