@@ -6,7 +6,7 @@ Creative research and experiments
 - shader as texture : http://fredericbriolet.com/three/fluid1/ <br/>
 -> based on https://www.ibiblio.org/e-notes/webgl/gpu/fluid.htm
 
-[![Noise shader](http://fredericbriolet.com/gifs/fluid3.gif)](http://fredericbriolet.com/three/fluid/)
+[![Noise shader](http://fredericbriolet.com/images/fluid3.jpg)](http://fredericbriolet.com/three/fluid/)
 
 
 **Three shapes :**
@@ -16,11 +16,13 @@ Creative research and experiments
 - godspeed : http://fredericbriolet.com/godspeed/
 
 **Three sphere noise shader :** <br/>
-http://fredericbriolet.com/three/noise/ <br/>
+- http://fredericbriolet.com/three/noise/
+- http://fredericbriolet.com/three/noise1/ <br/>
 -> based on https://www.clicktorelease.com/blog/vertex-displacement-noise-3d-webgl-glsl-three-js
 <br/>
-[![Three sphere noise shader](http://fredericbriolet.com/gifs/noise1.gif)](http://fredericbriolet.com/three/noise/)
-<br/><br/>
+[![Three sphere noise shader](http://fredericbriolet.com/images/noise1.jpg)](http://fredericbriolet.com/three/noise/)
+<br/>
+<br/>
 
 
 [Bonus] Moon Project - game made with Unity and 3DSMax in MMI first year with 7 students - I made 3D assets and code.
