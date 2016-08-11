@@ -1,0 +1,517 @@
+<html><head>
+<title>2D fluid dynamics</title>
+<style>
+  body{
+    padding: 0;
+    margin: 0;
+    max-width: 100%;
+    width: 100%;
+    max-height: 100%;
+    overflow-x: hidden;
+    background-color: #000;
+  }
+  #c{
+    display: none;
+    padding: 0;
+    position: absolute;
+    margin: 0;
+    right: 5%;
+    top: 5%;
+    width: 128px;
+    height: 128px;
+    z-index: 1
+  }
+</style>
+
+<script id="shader-fs-show" type="x-shader/x-fragment"> 
+precision highp float;
+  uniform sampler2D samp;
+  varying vec2 tc;
+void main(void) {
+   float T = texture2D(samp, tc).b;
+   if(T > 0.) gl_FragColor = vec4(T, 0., 0., 1.);
+   else gl_FragColor = vec4(0., 0., -T, 1.);
+}
+</script> 
+
+<script id="advec-fs" type="x-shader/x-fragment"> 
+precision highp float;
+  uniform sampler2D samp;
+  varying vec2 tc;
+  const float h = 1./512., dt = .008, tau = .5*dt/h;
+void main(void) {
+   vec2 D = -tau*vec2(
+     texture2D(samp, tc).r + texture2D(samp, vec2(tc.r - h, tc.g)).r,
+     texture2D(samp, tc).g + texture2D(samp, vec2(tc.r, tc.g - h)).g );
+   vec2 Df = floor(D),   Dd = D - Df;
+   vec2 tc1 = tc + Df*h;
+   vec3 new =  
+     (texture2D(samp, tc1).rgb*(1. - Dd.g) +
+      texture2D(samp, vec2(tc1.r, tc1.g + h)).rgb*Dd.g)*(1. - Dd.r) +
+     (texture2D(samp, vec2(tc1.r + h, tc1.g)).rgb*(1. - Dd.g) +
+      texture2D(samp, vec2(tc1.r + h, tc1.g + h)).rgb*Dd.g)*Dd.r;
+   gl_FragColor = vec4( new, texture2D(samp, tc).a );
+}
+</script> 
+
+<script id="p-fs" type="x-shader/x-fragment"> 
+precision highp float;
+  uniform sampler2D samp;
+  varying vec2 tc;
+  const float h = 1./512.;
+void main(void) {
+   vec4 t = texture2D(samp, tc);
+   t.a =
+     (texture2D(samp, vec2(tc.r - h, tc.g)).a +
+      texture2D(samp, vec2(tc.r + h, tc.g)).a +
+      texture2D(samp, vec2(tc.r, tc.g - h)).a +
+      texture2D(samp, vec2(tc.r, tc.g + h)).a -
+     (t.r - texture2D(samp, vec2(tc.r - h, tc.g)).r +
+      t.g - texture2D(samp, vec2(tc.r, tc.g - h)).g) *h) *.25;
+   gl_FragColor = t;
+}
+</script> 
+ 
+<script id="force-fs" type="x-shader/x-fragment"> 
+precision highp float;
+  uniform sampler2D samp;
+  uniform float c;
+  varying vec2 tc;
+  const float h = 1./512.;
+void main(void) {
+   vec4 t = texture2D(samp, tc);
+   t.g += c*(t.b + texture2D(samp, vec2(tc.r, tc.g + h)).b );
+   gl_FragColor = t;
+}
+</script> 
+ 
+<script id="div-fs" type="x-shader/x-fragment"> 
+precision highp float;
+  uniform sampler2D samp;
+  varying vec2 tc;
+  const float n = 512., h = 1./n;
+void main(void) {
+   vec4 t = texture2D(samp, tc);
+   t.r -= (texture2D(samp, vec2(tc.r + h, tc.g)).a - t.a)*n;
+   t.g -= (texture2D(samp, vec2(tc.r, tc.g + h)).a - t.a)*n;
+   gl_FragColor = t;
+}
+</script> 
+ 
+<script id="shader-vs" type="x-shader/x-vertex"> 
+  attribute vec2 aPos;
+  attribute vec2 aTexCoord;
+  varying   vec2 tc;
+void main(void) {
+   gl_Position = vec4(aPos, 0., 1.);
+   tc = aTexCoord;
+}
+</script> 
+
+<script id="Source-fs" type="x-shader/x-fragment"> 
+precision highp float;
+  uniform sampler2D samp;
+  uniform sampler2D samp2;
+  varying vec2 tc;
+  varying float S;
+void main(void) {
+   vec4 t = texture2D(samp, tc);
+   t.b += texture2D(samp2, tc).b;
+   gl_FragColor = t;
+}
+</script> 
+ 
+<script type="text/javascript">
+function getShader ( gl, id ){
+   var shaderScript = document.getElementById ( id )
+   var str = ""
+   var k = shaderScript.firstChild
+   while ( k ){
+     if ( k.nodeType == 3 ) str += k.textContent
+     k = k.nextSibling
+   }
+   var shader
+   if ( shaderScript.type == "x-shader/x-fragment" )
+           shader = gl.createShader ( gl.FRAGMENT_SHADER )
+   else if ( shaderScript.type == "x-shader/x-vertex" )
+           shader = gl.createShader(gl.VERTEX_SHADER)
+   else return null
+   gl.shaderSource(shader, str)
+   gl.compileShader(shader)
+   if (gl.getShaderParameter(shader, gl.COMPILE_STATUS) == 0)
+      alert(id + "\n" + gl.getShaderInfoLog(shader))
+   return shader
+}
+
+var gl, prog_advec, prog_force, prog_Source, prog_p, prog_div, prog_show,
+    FBO, FBO1, texture, texture1, texture2,
+    timer, delay = 0, it = 10, frames = 0, time, animation,
+    n = 512, sampLoc
+function main() {
+   var c = document.getElementById("c")
+   var err = "Your browser does not support "
+   if (!window.WebGLRenderingContext){
+     alert(err+"WebGL. See http://get.webgl.org")
+     return}
+   try { gl = c.getContext("experimental-webgl")
+   } catch(e) {}
+   if ( !gl ) {alert("Can't get WebGL"); return}
+   var ext
+   try { ext = gl.getExtension("OES_texture_float")
+   } catch(e) {}
+   if ( !ext ) {alert(err + "OES_texture_float extension"); return}
+
+   prog_force  = gl.createProgram()
+   gl.attachShader(prog_force, getShader( gl, "shader-vs" ))
+   gl.attachShader(prog_force, getShader( gl, "force-fs" ))
+   gl.linkProgram(prog_force)
+   gl.useProgram(prog_force)
+   gl.uniform1f(gl.getUniformLocation(prog_force, "c"), .001*.5*10 )
+   gl.uniform1i(gl.getUniformLocation(prog_force, "samp"), 1)
+
+   prog_advec  = gl.createProgram()
+   gl.attachShader(prog_advec, getShader( gl, "shader-vs" ))
+   gl.attachShader(prog_advec, getShader( gl, "advec-fs" ))
+   gl.linkProgram(prog_advec)
+
+   prog_div  = gl.createProgram()
+   gl.attachShader(prog_div, getShader( gl, "shader-vs" ))
+   gl.attachShader(prog_div, getShader( gl, "div-fs" ))
+   gl.linkProgram(prog_div)
+   gl.useProgram(prog_div)
+   gl.uniform1i(gl.getUniformLocation(prog_div, "samp"), 1)
+
+   prog_p  = gl.createProgram()
+   gl.attachShader(prog_p, getShader( gl, "shader-vs" ))
+   gl.attachShader(prog_p, getShader( gl, "p-fs" ))
+   gl.linkProgram(prog_p)
+   gl.useProgram(prog_p)
+   sampLoc  = gl.getUniformLocation(prog_p, "samp")
+
+   prog_Source  = gl.createProgram()
+   gl.attachShader(prog_Source, getShader( gl, "shader-vs" ))
+   gl.attachShader(prog_Source, getShader( gl, "Source-fs" ))
+   gl.linkProgram(prog_Source)
+   gl.useProgram(prog_Source)
+   gl.uniform1i(gl.getUniformLocation(prog_Source, "samp2"), 2)
+
+   prog_show  = gl.createProgram()
+   gl.attachShader(prog_show, getShader( gl, "shader-vs" ))
+   gl.attachShader(prog_show, getShader( gl, "shader-fs-show" ))
+   gl.linkProgram(prog_show)
+
+   gl.useProgram(prog_advec)
+   var aPosLoc = gl.getAttribLocation(prog_advec, "aPos")
+   var aTexLoc = gl.getAttribLocation(prog_advec, "aTexCoord")
+   gl.enableVertexAttribArray( aPosLoc )
+   gl.enableVertexAttribArray( aTexLoc )
+   var data = new Float32Array([-1,-1, 0,0,  1,-1, 1,0,  -1,1, 0,1,
+     1,1, 1,1])
+   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
+   gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW)
+   gl.vertexAttribPointer(aPosLoc, 2, gl.FLOAT, gl.FALSE, 16, 0)
+   gl.vertexAttribPointer(aTexLoc, 2, gl.FLOAT, gl.FALSE, 16, 8)
+
+   var pixels = [],  h = 2/n, T
+   for(var i = 0; i<n; i++)
+     for(var j = 0; j<n; j++){
+       T = 0
+       if (j>150 && j<350){
+         if (i>100 && i<150) T=.005
+         else if (i>350 && i<400) T= -.005
+       }
+       pixels.push( 0, 0, T, 0 )
+     }
+   texture2 = gl.createTexture()
+   gl.activeTexture(gl.TEXTURE2)
+   gl.bindTexture(gl.TEXTURE_2D, texture2)
+   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, n, 0,
+     gl.RGBA, gl.FLOAT, new Float32Array(pixels))
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+
+   var pixels = []
+   for(var i = 0; i<n; i++)
+     for(var j = 0; j<n; j++){
+       T = 0
+       if (i>200 && i<300){
+         if (j>100 && j<240) T=1
+         else if (j>260 && j<400) T= -1
+       }
+       pixels.push( 0, 0, T, 0 )
+     }
+   texture = gl.createTexture()
+   gl.activeTexture(gl.TEXTURE0)
+   gl.bindTexture(gl.TEXTURE_2D, texture)
+   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, n, 0,
+     gl.RGBA, gl.FLOAT, new Float32Array(pixels))
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+
+   texture1 = gl.createTexture()
+   gl.activeTexture(gl.TEXTURE1)
+   gl.bindTexture(gl.TEXTURE_2D, texture1)
+   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, n, 0,
+     gl.RGBA, gl.FLOAT, new Float32Array(pixels))
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+
+   FBO = gl.createFramebuffer()
+   gl.bindFramebuffer(gl.FRAMEBUFFER, FBO)
+   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+       gl.TEXTURE_2D, texture, 0)
+   FBO1 = gl.createFramebuffer()
+   gl.bindFramebuffer(gl.FRAMEBUFFER, FBO1)
+   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+       gl.TEXTURE_2D, texture1, 0)
+   if( gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE)
+     alert(err + "FLOAT as the color attachment to an FBO")
+
+   timer = setInterval(fr, 500)
+   time = new Date().getTime()
+   animation = "animate"
+//   draw()
+   anim()
+}
+function draw(){
+   gl.bindFramebuffer(gl.FRAMEBUFFER, FBO1)
+   gl.useProgram(prog_Source)
+   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+   gl.bindFramebuffer(gl.FRAMEBUFFER, FBO)
+   gl.useProgram(prog_force)
+   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+   gl.bindFramebuffer(gl.FRAMEBUFFER, FBO1)
+   gl.useProgram(prog_advec)
+   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+   gl.useProgram(prog_p)
+   for(var i = 0; i < it; i++){
+    gl.uniform1i(sampLoc, 1)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, FBO)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+    gl.uniform1i(sampLoc, 0)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, FBO1)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+   }
+
+   gl.bindFramebuffer(gl.FRAMEBUFFER, FBO)
+   gl.useProgram(prog_div)
+   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+   gl.useProgram(prog_show)
+   gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+   frames++
+}
+function anim(){
+   draw()
+   switch ( animation ){
+     case "reset":
+      var pixels = [], T
+      for(var i = 0; i<n; i++)
+       for(var j = 0; j<n; j++){
+        T = 0
+        if (i>200 && i<300){
+         if (j>100 && j<240) T=1
+         else if (j>260 && j<400) T= -1
+        }
+        pixels.push( 0, 0, T, 0 )
+       }
+      gl.bindTexture(gl.TEXTURE_2D, texture)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, n, 0,
+       gl.RGBA, gl.FLOAT, new Float32Array(pixels))
+      gl.bindTexture(gl.TEXTURE_2D, texture1)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, n, 0,
+       gl.RGBA, gl.FLOAT, new Float32Array(pixels))
+      animation = "animate"
+     case "animate":
+       if (delay == 0) requestAnimationFrame(anim)
+       else setTimeout("requestAnimationFrame(anim)", delay)
+       break
+     case "stop":
+       break
+   }
+}
+function run(v) {
+  if( animation == "animate" ){
+    animation = "stop"
+    document.getElementById('runBtn').value = "Run "}
+  else{
+    animation = "animate"
+    document.getElementById('runBtn').value = "Stop"
+    anim()
+  }
+}
+function reset() {
+  if( animation == "stop" ){
+    animation = "reset"
+    document.getElementById('runBtn').value = "Stop"
+    anim()}
+  else animation = "reset"
+}
+function fr(){
+  var ti = new Date().getTime()
+  var fps = Math.round(1000*frames/(ti - time))
+  document.getElementById("framerate").value = fps
+  frames = 0;  time = ti
+}
+function setDelay(val) {
+  delay = parseInt(val)
+}
+function setIt(val) {
+  it = parseInt(val)
+}
+function setBu(v) {
+  var bu = v.valueOf()
+  gl.useProgram(prog_force)                //    c = dt*b/2
+  gl.uniform1f(gl.getUniformLocation(prog_force, "c"), .001*.5*bu )
+}
+
+</script>
+</head>
+<body>
+
+<canvas id="c" width="512" height="512"></canvas>
+
+
+<script src="../build/three.js"></script>
+<script src="../js/detector.js"></script>
+<script src="../js/stats.min.js"></script>
+<script src="../js/orbitcontrols.js"></script>
+<script src="../js/threex.keyboardstate.js"></script>
+<script src="../js/threex.fullscreen.js"></script>
+<script src="../js/threex.windowresize.js"></script>
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+<script>
+
+// standard global variables
+var container, scene, camera, renderer, controls, stats;
+var keyboard = new THREEx.KeyboardState();
+var clock = new THREE.Clock();
+// custom global variables
+var cube;
+
+main();
+init();
+animate();
+
+// FUNCTIONS    
+function init() 
+{
+  // SCENE
+  scene = new THREE.Scene();
+  // CAMERA
+  var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+  var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+  camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+  scene.add(camera);
+  camera.position.set(0,10,100);
+  camera.lookAt(scene.position);  
+  // RENDERER
+  renderer = new THREE.WebGLRenderer( {antialias:true} );
+
+  renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+  container = document.getElementById( 'ThreeJS' );
+  container.appendChild( renderer.domElement );
+  // EVENTS
+  THREEx.WindowResize(renderer, camera);
+  THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+  // CONTROLS
+  controls = new THREE.OrbitControls( camera, renderer.domElement );
+  // STATS
+  stats = new Stats();
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.bottom = '0px';
+  stats.domElement.style.zIndex = 100;
+  container.appendChild( stats.domElement );
+  // LIGHT
+  var light = new THREE.PointLight(0xffffff);
+  light.position.set(0,40,0);
+  scene.add(light);
+  // FLOOR
+  var floorTexture = new THREE.ImageUtils.loadTexture( 'images/checkerboard.jpg' );
+  floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+  floorTexture.repeat.set( 10, 10 );
+  //var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+  var floorMaterial = new THREE.MeshPhongMaterial( { color: 0x222222, specular: 0x000000, shininess: 90, shading: THREE.FlatShading, side: THREE.BackSide } )
+  var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+  var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  floor.rotation.x = Math.PI / 2;
+  floor.doubleSided = true;
+  floor.position.y = -15;
+  scene.add(floor);
+  // SKYBOX/FOG
+  var skyBoxGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
+  var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x9999ff, side: THREE.BackSide } );
+  var skyBox = new THREE.Mesh( skyBoxGeometry, skyBoxMaterial );
+  // scene.add(skyBox);
+  scene.fog = new THREE.FogExp2( 0x9999ff, 0.00025 );
+  
+  ////////////
+  // CUSTOM //
+  ////////////
+  
+  /////// draw text on canvas /////////
+
+  // create a canvas element
+  var canvas1 = document.getElementById('c');
+  var context1 = canvas1.getContext('2d');
+    
+  // canvas contents will be used for a texture
+  var texture1 = new THREE.Texture(canvas1) 
+  texture1.needsUpdate = true;
+  //var texture1 = new THREE.TextureLoader().load( "images/checkerboard.jpg" );
+      
+  var material1 = new THREE.MeshBasicMaterial( {map: texture1, side:THREE.DoubleSide } );
+  material1.transparent = true;
+  material1.needsUpdate = true;
+  var material = new THREE.MeshBasicMaterial( {color: 0x0099} );
+
+  var geometry = new THREE.SphereGeometry( 10, 100, 100 );
+  cube = new THREE.Mesh( geometry, material1 );
+
+  cube.position.set(0,0,0);
+  cube.material.map.needsUpdate = true;
+  scene.add( cube );
+
+}
+
+function animate() 
+{
+  requestAnimationFrame( animate );
+  render();   
+  update();
+}
+
+function update()
+{
+  if ( keyboard.pressed("z") ) 
+  { 
+    // do something
+  }
+  
+  controls.update();
+  stats.update();
+}
+
+function render() 
+{
+  renderer.render( scene, camera );
+  cube.material.map.needsUpdate = true;
+}
+
+</script>
+
+</body>
+</html>
+
+
+</body>
+</html>

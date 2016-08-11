@@ -1,0 +1,122 @@
+<html><head>
+<title>Moving plane</title>
+<style>
+  body{
+    padding: 0;
+    margin: 0;
+    max-width: 100%;
+    width: 100%;
+    max-height: 100%;
+    overflow-x: hidden;
+    background-color: #000;
+  }
+</style>
+<body>
+
+<script src="../build/three.js"></script>
+<script src="../js/detector.js"></script>
+<script src="../js/stats.min.js"></script>
+<script src="../js/orbitcontrols.js"></script>
+<script src="../js/threex.keyboardstate.js"></script>
+<script src="../js/threex.fullscreen.js"></script>
+<script src="../js/threex.windowresize.js"></script>
+
+<script>
+var camera;
+var scene;
+var renderer;
+var mesh;
+
+init();
+animate();
+
+function init() {
+
+    scene = new THREE.Scene();
+    
+    // CAMERA
+    var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+    var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+    camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+    scene.add(camera);
+    camera.position.set(0,10,100);
+    camera.lookAt(scene.position);  
+
+    // LIGHT
+    var light = new THREE.DirectionalLight( 0xffffff );
+    light.position.set( 0, 1, 1 ).normalize();
+    scene.add(light);
+
+    // RENDERER
+    renderer = new THREE.WebGLRenderer({ alpha: true });
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
+    // CONTROLS
+    controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+    renderer.setClearColor( 0xffffff, 1);
+    document.body.appendChild( renderer.domElement );
+
+    var geometry = new THREE.PlaneGeometry(50, 50, 50, 50);  
+
+    var texture = THREE.ImageUtils.loadTexture('img/fb.png', {}, function() {
+    renderer.render(scene, camera);
+    })
+    var material = new THREE.MeshBasicMaterial({wireframe: true, color: 0x000000})
+
+    mesh = new THREE.Mesh(geometry, material );
+    mesh.rotation.x = -80;
+    scene.add( mesh );
+
+    var firstMaterial = new THREE.ShaderMaterial({
+        uniforms: { noisemax: { type: 'f', value: 10}}
+    });
+
+    var secondMaterial = new THREE.ShaderMaterial({
+        uniforms: { noisemax: { type: 'f', value: 10}}
+    });
+
+    var firstBall = new THREE.Mesh(new THREE.SphereGeometry(20,20,20), firstMaterial);
+    var secondBall = new THREE.Mesh(new THREE.SphereGeometry(20,20,20), secondMaterial);
+    secondBall.position.x = -40;  
+    firstBall.position.x = 40;
+    scene.add( firstBall );
+    scene.add( secondBall );  
+
+
+    window.addEventListener( 'resize', onWindowResize, false );
+
+    render();
+}
+
+function animate() {
+
+    requestAnimationFrame( animate );    
+    render();
+    update();
+
+}
+
+function update()
+{
+  controls.update();
+}
+
+function render() {
+
+    renderer.render( scene, camera );
+
+    mesh.geometry.vertices[50].y+=.11;
+    mesh.geometry.verticesNeedUpdate=true;
+}
+
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    render();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,663 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Godspeed You!</title>
+    <meta charset="utf-8">
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenMax.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/plugins/CSSPlugin.min.js"></script>
+
+    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <style>
+    @import url(http://fonts.googleapis.com/css?family=Roboto:300);
+      body {
+        background-color: rgb(159, 120, 80);
+        margin: 0px;
+        overflow: hidden;
+      }
+      html{
+        position: fixed;
+      }
+      h1 a, h2 a{
+        color: #000;
+        text-decoration: none;
+      }
+      p a{
+        color: #fff;
+        text-decoration: none;
+      }
+
+      a:hover{
+        text-decoration: underline;
+        -webkit-transition: 0.5s;
+           -moz-transition: 0.5s;
+           -o-transition: 0.5s;
+           transition: 0.5s;
+      }
+      canvas{
+        opacity: 0.98;
+      }
+      h1{
+        opacity: 0;
+        position: absolute;
+        color: #000;
+        font-family: "Courier New", Courier, mono;
+        font-size: 11px;
+        font-weight: 100;
+        margin: auto;
+        text-align: center;
+        left: 50%;
+        top: 15%;
+        width: 326px;
+        height: 118px;
+        margin-top: -59px;
+        margin-left: -163px;
+      }
+      #artist{
+        top: 13%;
+      }
+      .controls{
+        position: absolute;
+        float: right;
+        top: 0%;
+        right: 0px;
+        text-align: left;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        font-family: "Roboto", sans-serif;
+        font-weight: 300;
+        font-size: 13px;
+        padding: 10px 10px 10px 10px;
+        width: 200px;
+        height: 100%;
+        opacity: 0;
+        visibility: hidden;
+        -webkit-transition: .5s cubic-bezier(0.680, -0.550, 0.265, 1.550);
+          -moz-transition: .5s cubic-bezier(0.680, -0.550, 0.265, 1.550);
+          -o-transition: .5s cubic-bezier(0.680, -0.550, 0.265, 1.550);
+          transition: .5s cubic-bezier(0.680, -0.550, 0.265, 1.550);
+      }
+      .controls-active{
+        opacity: 1;
+        visibility: visible;
+      }
+      ul, li{
+        margin-left: 0px;
+        padding-left: 0px;
+        list-style-type:none;
+      }
+      h3{
+        text-align: left;
+      }
+      #help{
+        position: absolute;
+        display: block;
+        right: 15px;
+        top: 10px;
+        display: block;
+        margin: 0px 0px 0px 0px;
+        padding: 10px 10px 10px 10px;
+
+      }
+      .menu-burger{
+        width: 20px;
+        height: 14px;
+        position: absolute;
+        margin: -7px 0 0 -10px;
+        background-color: transparent;
+        border: none;
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
+        transition: 0.2s;
+        transition-delay: 0.15s;
+        outline: none;
+        cursor: pointer;
+      }
+      .menu-burger i{
+          display: block;
+          text-indent: 100%;
+          overflow: hidden;
+          white-space: nowrap;
+          height: 2px;
+          background-color: rgba(0,0,0,0.8);
+          width: 100%;
+          position: absolute;
+          top: 50%;
+          left: 0;
+          transition: 0.3s;
+          -webkit-transition: 0.3s;
+          -moz-transition: 0.3s;
+          -o-transition: 0.3s;
+          transition-delay: 0.2s;
+          -webkit-transition-delay: 0.2s;
+          -moz-transition-delay: 0.2s;
+          -o-transition-delay: 0.2s;
+          transition-delay: 0.2s;
+      }
+      .menu-burger span{
+          content: '';
+          position: absolute;
+          top: 0;
+          height: 0;
+          border-bottom-style: solid;
+          border-bottom-width: 2px;
+          border-bottom-color: rgba(0,0,0,0.8);
+          width: 100%;
+          left: 0;
+          right: 0;
+          -webkit-transition: .5s cubic-bezier(0.680, -0.550, 0.265, 1.550);
+          -moz-transition: .5s cubic-bezier(0.680, -0.550, 0.265, 1.550);
+          -o-transition: .5s cubic-bezier(0.680, -0.550, 0.265, 1.550);
+          transition: .5s cubic-bezier(0.680, -0.550, 0.265, 1.550);
+          transform-origin: right bottom;
+          -moz-transform-origin: right bottom;
+          -webkit-transform-origin: right bottom;
+          -o-transform-origin: right bottom;
+          -ms-transform-origin: right bottom;
+      }
+      .menu-burger span:last-child{
+          top: 100%;
+          transform-origin: right bottom;
+          -moz-transform-origin: right bottom;
+          -webkit-transform-origin: right bottom;
+          -o-transform-origin: right bottom;
+          -ms-transform-origin: right bottom;
+      }
+      .menu-burger--is-active{
+          transform: translate3d(0, 0, 0);
+          -moz-transform: translate3d(0, 0, 0);
+          -webkit-transform: translate3d(0, 0, 0);
+          -o-transform: translate3d(0, 0, 0);
+          -ms-transform: translate3d(0, 0, 0);
+          transition-delay: 0.2s;
+          -webkit-transition-delay: 0.2s;
+          -moz-transition-delay: 0.2s;
+          -o-transition-delay: 0.2s;
+          transition-delay: 0.2s;
+      }
+      .menu-burger--is-active span{
+          border-bottom-color: #fff;
+      }
+      .menu-burger--is-active i{
+        opacity: 0;
+        transition-delay: 0;
+        -webkit-transition-delay: 0;
+        -moz-transition-delay: 0;
+        -o-transition-delay: 0;
+        transition-delay: 0;
+      }
+      .menu-burger--is-active span:last-child{
+        transform: rotate3d(0, 0, 1, 45deg) translate3d(-1px, 1px, 0);
+        -moz-transform: rotate3d(0, 0, 1, 45deg) translate3d(-1px, 1px, 0);
+        -webkit-transform: rotate3d(0, 0, 1, 45deg) translate3d(-1px, 1px, 0);
+        -o-transform: rotate3d(0, 0, 1, 45deg) translate3d(-1px, 1px, 0);
+        -ms-transform: rotate3d(0, 0, 1, 45deg) translate3d(-1px, 1px, 0);
+      }
+      .menu-burger--is-active span:first-child{
+        transform: rotate3d(0, 0, 1, -45deg) translate3d(0, 0, 0);
+        -moz-transform: rotate3d(0, 0, 1, -45deg) translate3d(0, 0, 0);
+        -webkit-transform: rotate3d(0, 0, 1, -45deg) translate3d(0, 0, 0);
+        -o-transform: rotate3d(0, 0, 1, -45deg) translate3d(0, 0, 0);
+        -ms-transform: rotate3d(0, 0, 1, -45deg) translate3d(0, 0, 0);
+      }
+
+      #help:hover{
+        cursor: pointer;
+      }
+      #description{
+        margin-top: 50px;
+        line-height: 17px;
+      }
+      #description img{
+        padding: 20px 0px 10px 0px;
+        margin: auto;
+        text-align: center !important;
+        width: 170px;
+      }
+      #credits{
+        margin-top: 40px;
+        line-height: 17px;
+      }
+    </style>
+  </head>
+  <body>
+
+    <script src="build/three.min.js"></script>
+    <script src="build/OrbitControls.js"></script>
+    <script src='build/THREEx.KeyboardState.js'></script>
+
+    <script>
+
+      var SCREEN_WIDTH = window.innerWidth,
+      SCREEN_HEIGHT = window.innerHeight,
+
+      mouseX = 0, mouseY = 0,
+
+      windowHalfX = window.innerWidth / 2,
+      windowHalfY = window.innerHeight / 2,
+
+      SEPARATION = 200,
+      AMOUNTX = 10,
+      AMOUNTY = 10,
+
+      camera, scene, renderer;
+
+      var keyboard = new THREEx.KeyboardState();
+
+      lines = [];
+
+      init();
+
+// AUDIO
+var boost = 0;
+
+var sound1, sound2;
+
+      var clock = new THREE.Clock();
+
+      var Sound = function ( sources, radius, volume ) {
+
+        audio = document.createElement( 'audio' );
+
+        for ( var i = 0; i < sources.length; i ++ ) {
+
+          var source = document.createElement( 'source' );
+          source.src = sources[ i ];
+
+          audio.appendChild( source );
+
+        }
+
+        this.position = new THREE.Vector3();
+
+        this.play = function () {
+
+          audio.play();
+
+        }
+
+        this.update = function ( camera ) {
+
+          var distance = this.position.distanceTo( camera.position );
+
+          if ( distance <= radius ) {
+
+            audio.volume = volume * ( 1 - distance / radius );
+
+          } else {
+
+            audio.volume = 0;
+
+          }
+
+        }
+
+      }
+      sound1 = new Sound( [ 'sounds/Storm.mp3' ], 275, 1 );
+      sound1.play();
+
+      // MAIN DROITE
+  var img = new THREE.MeshLambertMaterial({ //CHANGED to MeshBasicMaterial
+        map:THREE.ImageUtils.loadTexture('img/godspeedRight1.png')
+    });
+  //  img.map.needsUpdate = true; //ADDED
+
+    // plane
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(247, 271),img);
+    plane.overdraw = true;
+    plane.material.side = THREE.DoubleSide;
+    plane.scale.x = 3;
+    plane.scale.y = 3;
+    plane.scale.z = 1;
+    plane.position.x = -400;
+    plane.position.y = -200;
+    scene.add(plane);
+
+    // MAIN GAUCHE
+      var img = new THREE.MeshLambertMaterial({ //CHANGED to MeshBasicMaterial
+        map:THREE.ImageUtils.loadTexture('img/godspeedLeft1.png')
+    });
+//   img.map.needsUpdate = true; //ADDED
+
+
+    // plane
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(230, 388),img);
+    plane.overdraw = true;
+    plane.material.side = THREE.DoubleSide;
+    plane.scale.x = 3;
+    plane.scale.y = 3;
+    plane.scale.z = 1;
+    plane.position.x = 400;
+    plane.position.y = -320;
+    scene.add(plane);
+
+     // add subtle ambient lighting
+//    var ambientLight = new THREE.AmbientLight(0x555555);
+//    scene.add(ambientLight);
+//
+//    // add directional light source
+//    var directionalLight = new THREE.DirectionalLight(0xffffff);
+//    directionalLight.position.set(1, 1, 1).normalize();
+//    scene.add(directionalLight);
+
+click = 0;
+toggle = 0;
+
+    // TABLEAU LINES
+
+    
+
+
+      animate();
+
+      function onMouseDown( event_info ) {
+            //stop any other event listener from recieving this event
+            event_info.preventDefault(); 
+            click = 1;
+            toggle = toggle+1;
+
+          }
+
+      function init() {
+
+        var container, separation = 100, amountX = 50, amountY = 50,
+        particles, particle;
+
+        container = document.createElement('div');
+        document.body.appendChild(container);
+
+        camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
+        camera.position.z = 5000;
+
+        scene = new THREE.Scene();
+
+        renderer = new THREE.CanvasRenderer();
+        renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+        container.appendChild( renderer.domElement );
+        renderer.setClearColor( 0x9F7850, 1);
+
+        // Add OrbitControls so that we can pan around with the mouse.
+          controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+          // Add mouse down event
+           renderer.domElement.addEventListener( 'mousedown', onMouseDown );
+
+        // particles
+
+        var PI2 = Math.PI * 2;
+        var material = new THREE.SpriteCanvasMaterial( {
+
+          color: 0x780100,
+          program: function ( context ) {
+
+            context.beginPath();
+            context.arc( 0, 0, 0.5, 0, PI2, true );
+            context.fill();
+
+          }
+
+        } );
+
+
+
+        for ( var i = 0; i < 2; i ++ ) {
+
+          particle = new THREE.Sprite( material );
+          particle.position.x = Math.random() * 2 - 1;
+          particle.position.y = Math.random() * 2 - 1;
+          particle.position.z = Math.random() * 2 - 1;
+          particle.position.normalize();
+          particle.position.multiplyScalar( Math.random() * 10 + 450 );
+          particle.scale.multiplyScalar( 2 );
+          scene.add( particle );
+
+        }
+
+        // lines
+
+        for (var i = 0; i < 1500; i++) {
+
+          var geometry = new THREE.Geometry();
+
+          var vertex = new THREE.Vector3( Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1 );
+          vertex.normalize();
+          vertex.multiplyScalar( 450 );
+
+          geometry.vertices.push( vertex );
+
+          var vertex2 = vertex.clone();
+          vertex2.multiplyScalar( Math.random() * 0.4 + 1 );
+
+          geometry.vertices.push( vertex2 );
+
+          var line = new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: 0x780100, opacity: Math.random() } ) );
+          scene.add( line );
+          lines.push( line );
+        }
+
+//DEUXIEME SPHERE
+
+
+        var PI2 = Math.PI ;
+        var material = new THREE.SpriteCanvasMaterial( {
+
+          color: 0x780100,
+          program: function ( context ) {
+
+            context.beginPath();
+            context.arc( 0, 0, 0.5, 0, PI2, true );
+            context.fill();
+
+          
+
+          }
+
+        } );
+
+        for ( var i = 0; i < 2; i ++ ) {
+
+          particle = new THREE.Sprite( material );
+          particle.position.x = Math.random() * 2 - 1;
+          particle.position.y = Math.random() * 2 - 1;
+          particle.position.z = Math.random() * 2 - 1;
+          particle.position.normalize();
+          particle.position.multiplyScalar( Math.random() * 100 + 1050 );
+          particle.scale.multiplyScalar( 0.5 );
+          scene.add( particle );
+
+        }
+
+        // lines
+        var tab = [];
+        for (var i = 0; i < 1500; i++) {
+
+          var geometry = new THREE.Geometry();
+
+          var vertex = new THREE.Vector3( Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1 );
+          vertex.normalize();
+          vertex.multiplyScalar( 1050 );
+
+          geometry.vertices.push( vertex );
+
+          var vertex2 = vertex.clone();
+          vertex2.multiplyScalar( Math.random() * 0.4 + 1 );
+
+          geometry.vertices.push( vertex2 );
+
+          var line = new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: 0x780100, opacity: Math.random() } ) );
+
+          line.name = "ligne"+tab[i];
+          scene.add( line );
+
+          lines.push( line );
+        }
+
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+        document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+        //
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+      }
+
+      function onWindowResize() {
+
+        windowHalfX = window.innerWidth / 2;
+        windowHalfY = window.innerHeight / 2;
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+      }
+
+      //
+
+      function onDocumentMouseMove(event) {
+
+        mouseX = event.clientX - windowHalfX;
+        mouseY = event.clientY - windowHalfY;
+      }
+
+      function onDocumentTouchStart( event ) {
+
+        if ( event.touches.length > 1 ) {
+
+          event.preventDefault();
+
+          mouseX = event.touches[ 0 ].pageX - windowHalfX;
+          mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+        }
+
+      }
+
+      function onDocumentTouchMove( event ) {
+
+        if ( event.touches.length == 1 ) {
+
+          event.preventDefault();
+
+          mouseX = event.touches[ 0 ].pageX - windowHalfX;
+          mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+        }
+
+      }
+
+      //
+
+      function animate() {
+
+        requestAnimationFrame( animate );
+
+        render();
+
+      }
+
+      function render() {
+
+        if( keyboard.pressed("r") ){
+          camera.position.z = 5000;
+          for(i=0; i < lines.length; i++){
+          lines[i].scale.z = 1;
+          }
+        }
+        else{
+          camera.position.x += ( mouseX*3 - camera.position.x ) * 1.1;
+          camera.position.y += ( - mouseY*3 + 200 - camera.position.y ) * 1.1;
+          
+          
+          document.onclick = function(){
+                
+              }
+              for(i=0; i < lines.length; i++){
+                lines[i].scale.z += 0.005;
+              } 
+
+          if( keyboard.pressed("space") ){
+            click=0;
+          }  
+          if( keyboard.pressed("down") ){
+            camera.position.z += 100;
+          } 
+          if( keyboard.pressed("up") ){
+            camera.position.z -= 100;
+          } 
+
+
+              
+              if(toggle/2 == Math.round(toggle/2))
+              {
+                if(click==1){
+                  for(i=0; i < lines.length; i++){
+                    lines[i].scale.z -= 0.1;
+                    if(i==lines.lenght-2){
+                      i = 0;
+                    }
+                  }
+                }
+              }
+              else if(click==1){
+                  for(i=0; i < lines.length; i++){
+                    lines[i].scale.z += 0.1;
+                    if(i==lines.lenght-2){
+                      i = 0;
+                    }
+                  }
+              }
+            }
+
+
+            
+
+        camera.lookAt( scene.position );
+
+        renderer.render( scene, camera );
+
+
+
+      }
+
+    </script>
+    <div class="box">
+      <h1 class="text" id="album">
+        Lift your skinny fists like antennas to heaven
+      </h1>
+      <h1 class="text" id="artist">
+        <a href="http://www.brainwashed.com/godspeed/" id="lien" target="blank">- Godspeed You! Black Emperor -</a>
+      </h1>
+      <div class="controls">
+        <h3>Controls</h3>
+        <ul>
+          <li>- mouse click = explosion</li>
+          <li>- space = stop </li>
+          <li>- r = reset</li>
+          <li>- up/down = camera depth position</li>
+        </ul>
+        <p id="description">This animation is a tribute to the album <i>Lift your skinny fists like antennas to heaven</i> by Godspeed You! Black Emperor, which has the following artwork as cover.<br /><img src="img/godspeed.jpg" alt="gy!be" /></p>
+        <p id="credits">Created by <a href="http://fredericbriolet.com" target="blank">Fred Briolet</a> and <a href="http://sparkk.fr" target="blank">Sparkk</a>, built with <a href="http://threejs.org" target="blank">Three.js</a></p>
+      </div>
+      <div id="help"><button type="button" id="menu-toggle" class="menu-burger"><span></span><i>Show Menu</i><span></span></button></div>
+      <!-- <img src="img/fleche.png" class="fleche"> -->
+      <script type="text/javascript">
+      window.onload = function(){
+        var text = document.getElementsByClassName("text");
+        TweenMax.to(text, 3, {css:{opacity: 0.8}});
+      };
+      </script>
+      <script type="text/javascript">
+      $('#help').click(function(){
+        $('.menu-burger').toggleClass('menu-burger--is-active');
+        $('.controls').toggleClass('controls-active');
+      });
+      
+      </script>
+    </div>
+  </body>
+</html>

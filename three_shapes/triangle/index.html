@@ -1,0 +1,312 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<title>Enter the Triangle</title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="description" content="Bienvenue sur le site personnel de Frédéric Briolet, étudiant en MMI (Métiers du Multimédia et de l'Internet), formation web à Bordeaux." />
+    <link rel="icon" type="image/png" href="../../favicon3.png"/>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenMax.min.js"></script>
+		<script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/plugins/CSSPlugin.min.js"></script>
+		<style>
+		@import url(http://fonts.googleapis.com/css?family=Lato:100,400);
+			body {
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+			a{
+				color: #fff;
+				text-decoration: none;
+			}
+			#lien{
+				-moz-border-radius:1px;
+				-webkit-border-radius:1px;
+				border-radius:1px;
+				border: 1px solid #000000;
+				padding: 10px 10px 10px 10px;
+			}
+			a:visited{
+				color: #fff;
+			}
+			a:hover{
+				color: #fffff0;
+				-webkit-transition: 1s;
+			     -moz-transition: 1s;
+			     -o-transition: 1s;
+			     transition: 1s;
+
+			}
+			h1{
+				display: none;
+				opacity: 0;
+				position: absolute;
+				color: #ffffff;
+				font-family: 'Lato', sans-serif;
+				font-weight: 100;
+				margin: auto;
+				text-align: center;
+				left: 50%;
+				top: 50%;
+				width: 326px;
+				height: 118px;
+				margin-top: -59px;
+				margin-left: -163px;
+			}
+			h2{
+				position: absolute;
+				color: #ffffff;
+				font-family: 'Lato', sans-serif;
+				font-size: 14pt;
+				font-weight: 100;
+				margin: auto;
+				text-align: center;
+				left: 0%;
+				top: 0%;
+				margin-top: 20px;
+				margin-left: 10px;
+				-webkit-transition: 1s;
+			     -moz-transition: 1s;
+			     -o-transition: 1s;
+			     transition: 1s;
+			}
+			h2 a{
+				opacity: 0.5;
+			}
+			h2 a:hover{
+				opacity: 1;
+			}
+		</style>
+	</head>
+	<body>
+		
+		<script src="build/three.min.js"></script>
+		<script src="build/OrbitControls.js"></script>
+
+		<script>
+
+			var mouseX = 100, mouseY = 100,
+
+			windowHalfX = window.innerWidth / 2,
+			windowHalfY = window.innerHeight / 2,
+
+			SEPARATION = 200,
+			AMOUNTX = 10,
+			AMOUNTY = 10,
+
+			camera, scene, renderer, particle, lines, line;
+			scene = new THREE.Scene();
+
+
+			
+
+			init();
+			animate();
+
+			function init() {
+
+				var container, separation = 1000, amountX = 500, amountY = 500,
+				particles;
+
+				container = document.createElement('div');
+				document.body.appendChild(container);
+
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 40;
+
+				
+
+				renderer = new THREE.CanvasRenderer();
+				renderer.setClearColor( 0x000000 );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+				
+				// Add OrbitControls so that we can pan around with the mouse.
+   		 		controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				var geometry = new THREE.Geometry();
+				lines = geometry.vertices;
+
+				camera.position.z = 100;
+
+				var triangle = 0;
+
+				for ( var i = 0; i < 50; i ++ ) {
+				var material = new THREE.SpriteCanvasMaterial( {
+					color: 0x00ffff,
+				} );
+
+
+					particle = new THREE.Sprite( material );
+					particle.matrixAutoUpdate = false;
+					particle.updateMatrix();
+
+					lines.push(
+						new THREE.Vector3( -5,  -5 , i ),
+						new THREE.Vector3( 0, 5 , i ),
+						new THREE.Vector3(  5 , -5 , i )
+					);
+
+					scene.add( particle );
+
+					lines.push( particle.position );
+
+				}
+
+				// lines
+				geometry.verticesNeedUpdate = true;
+				geometry.elementsNeedUpdate = true;
+				geometry.morphTargetsNeedUpdate = true;
+				geometry.uvsNeedUpdate = true;
+				geometry.normalsNeedUpdate = true;
+				geometry.colorsNeedUpdate = true;
+				geometry.tangentsNeedUpdate = true;
+				geometry.dynamic = true;
+				
+
+				line = new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.4 } ) );
+				//line.scale.x = line.scale.y = line.scale.z = 0.01;
+				scene.add( line );
+
+
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+				document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+/*
+				var axes = new THREE.AxisHelper(50);
+ 				scene.add(axes); 
+
+				 var gridXZ = new THREE.GridHelper(100, 10);
+				 gridXZ.setColors( new THREE.Color(0x006600), new THREE.Color(0x006600) );
+				 gridXZ.position.set( 100,0,100 );
+				 scene.add(gridXZ);
+				 
+				 var gridXY = new THREE.GridHelper(100, 10);
+				 gridXY.position.set( 100,100,0 );
+				 gridXY.rotation.x = Math.PI/2;
+				 gridXY.setColors( new THREE.Color(0x000066), new THREE.Color(0x000066) );
+				 scene.add(gridXY);
+
+				 var gridYZ = new THREE.GridHelper(100, 10);
+				 gridYZ.position.set( 0,100,100 );
+				 gridYZ.rotation.z = Math.PI/2;
+				 gridYZ.setColors( new THREE.Color(0x660000), new THREE.Color(0x660000) );
+				 scene.add(gridYZ);
+*/
+
+			}
+
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			//
+
+			function onDocumentMouseMove(event, particle) {
+				mouseX = event.clientX - windowHalfX;
+				mouseY = event.clientY - windowHalfY;
+
+			}
+
+			function onDocumentTouchStart( event ) {
+
+				if ( event.touches.length > 1 ) {
+
+					event.preventDefault();
+
+					mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+			function onDocumentTouchMove( event ) {
+
+				if ( event.touches.length == 1 ) {
+
+					event.preventDefault();
+
+					mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+				
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				render();
+
+			}
+
+			function render() {
+
+				camera.position.z -= 0.1;
+
+				
+				if(camera.position.z>15){
+					line.material.opacity = 1-camera.position.z/100;
+				}
+				else{
+					line.material.opacity = line.material.opacity/1.1;
+				}
+
+				
+				controls.update();
+				//camera.lookAt( scene.position );
+				
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+		<div class="box">
+			<h1 id="sparkk">
+				<a href="http://sparkk.fr" id="lien" target="blank" onmouseover="borderin(this)" onmouseout="borderout(this)">S P A R K K</a>
+			</h1>
+			<h2 id="bouton">
+				<a href="http://fredericbriolet.com/three/lines">Version 1</a><br />
+				<a href="http://fredericbriolet.com/three/lines1">Version 2</a>
+			</h2>
+			<script type="text/javascript">
+			window.onload = function(){
+				var text = document.getElementById("sparkk");
+				TweenMax.to(text, 3, {css:{opacity: 1}});
+
+				var bordure = document.getElementById("lien");
+				TweenMax.from(bordure, 1, {clip:"rect(50px 100px 50px 0px)"})
+				TweenMax.to(bordure, 6, {clip:"rect(0px,150px,150px,0px)", css:{borderColor:"#1AAF5E"}});
+			};
+			</script>
+			<script type="text/javascript">
+			function borderin(x)
+			{
+			TweenMax.to(x, 1, {css:{borderColor:"#ffffff"}});
+			}
+			function borderout(x)
+			{
+			TweenMax.to(x, 1, {css:{borderColor:"#1AAF5E"}});
+			}
+			</script>
+		</div>
+
+	</body>
+</html>
