@@ -10,15 +10,16 @@
     overflow-x: hidden;
     background-color: #000;
   }
-  canvas{
+  #c{
+    display: none;
     padding: 0;
     position: absolute;
-    display: block;
     margin: 0;
-    left: 50%;
-    top: 50%;
-    margin-top: -256px;
-    margin-left: -256px;
+    right: 5%;
+    top: 5%;
+    width: 128px;
+    height: 128px;
+    z-index: 1
   }
 </style>
 
@@ -28,8 +29,8 @@ precision highp float;
   varying vec2 tc;
 void main(void) {
    float T = texture2D(samp, tc).b;
-   if(T > 0.) gl_FragColor = vec4(0, 0., 0., 1.);
-   else gl_FragColor = vec4(1., 1., 1., 1.);
+   if(T > 0.) gl_FragColor = vec4(T, 0., 0., 1.);
+   else gl_FragColor = vec4(0., 0., -T, 1.);
 }
 </script> 
 
@@ -37,7 +38,7 @@ void main(void) {
 precision highp float;
   uniform sampler2D samp;
   varying vec2 tc;
-  const float h = 1./5120., dt = 0.6, tau = .5*dt/h;
+  const float h = 1./512., dt = .008, tau = .5*dt/h;
 void main(void) {
    vec2 D = -tau*vec2(
      texture2D(samp, tc).r + texture2D(samp, vec2(tc.r - h, tc.g)).r,
@@ -49,7 +50,7 @@ void main(void) {
       texture2D(samp, vec2(tc1.r, tc1.g + h)).rgb*Dd.g)*(1. - Dd.r) +
      (texture2D(samp, vec2(tc1.r + h, tc1.g)).rgb*(1. - Dd.g) +
       texture2D(samp, vec2(tc1.r + h, tc1.g + h)).rgb*Dd.g)*Dd.r;
-   gl_FragColor = vec4( new, texture2D(samp, tc).a*1.0 );
+   gl_FragColor = vec4( new, texture2D(samp, tc).a );
 }
 </script> 
 
@@ -144,7 +145,7 @@ function getShader ( gl, id ){
 
 var gl, prog_advec, prog_force, prog_Source, prog_p, prog_div, prog_show,
     FBO, FBO1, texture, texture1, texture2,
-    timer, delay = 0, it = 10, frames = 10, time, animation,
+    timer, delay = 0, it = 10, frames = 0, time, animation,
     n = 512, sampLoc
 function main() {
    var c = document.getElementById("c")
@@ -357,7 +358,7 @@ function reset() {
 function fr(){
   var ti = new Date().getTime()
   var fps = Math.round(1000*frames/(ti - time))
-  //document.getElementById("framerate").value = fps
+  document.getElementById("framerate").value = fps
   frames = 0;  time = ti
 }
 function setDelay(val) {
@@ -369,21 +370,148 @@ function setIt(val) {
 function setBu(v) {
   var bu = v.valueOf()
   gl.useProgram(prog_force)                //    c = dt*b/2
-  gl.uniform1f(gl.getUniformLocation(prog_force, "c"), .01*.5*bu )
+  gl.uniform1f(gl.getUniformLocation(prog_force, "c"), .001*.5*bu )
 }
 
 </script>
 </head>
-<body onload="main()">
+<body>
 
 <canvas id="c" width="512" height="512"></canvas>
 
-<!--<br><button onclick="reset()">Reset</button>
-<input type="button" onclick="run()" value="Stop" size="1" id="runBtn">
-It<input size="1" value="10" onchange="setIt( this.value )">
-&beta;<input size="2" value="10" onchange="setBu( this.value )">
-delay<input size="1" value="0" onchange="setDelay( this.value )">
-fps<input size="1" id="framerate">-->
+
+<script src="../build/three.js"></script>
+<script src="../js/detector.js"></script>
+<script src="../js/stats.min.js"></script>
+<script src="../js/orbitcontrols.js"></script>
+<script src="../js/threex.keyboardstate.js"></script>
+<script src="../js/threex.fullscreen.js"></script>
+<script src="../js/threex.windowresize.js"></script>
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+<script>
+
+// standard global variables
+var container, scene, camera, renderer, controls, stats;
+var keyboard = new THREEx.KeyboardState();
+var clock = new THREE.Clock();
+// custom global variables
+var cube;
+
+main();
+init();
+animate();
+
+// FUNCTIONS    
+function init() 
+{
+  // SCENE
+  scene = new THREE.Scene();
+  // CAMERA
+  var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+  var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+  camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+  scene.add(camera);
+  camera.position.set(0,10,100);
+  camera.lookAt(scene.position);  
+  // RENDERER
+  renderer = new THREE.WebGLRenderer( {antialias:true} );
+
+  renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+  container = document.getElementById( 'ThreeJS' );
+  container.appendChild( renderer.domElement );
+  // EVENTS
+  THREEx.WindowResize(renderer, camera);
+  THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+  // CONTROLS
+  controls = new THREE.OrbitControls( camera, renderer.domElement );
+  // STATS
+  stats = new Stats();
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.bottom = '0px';
+  stats.domElement.style.zIndex = 100;
+  container.appendChild( stats.domElement );
+  // LIGHT
+  var light = new THREE.PointLight(0xffffff);
+  light.position.set(0,40,0);
+  scene.add(light);
+  // FLOOR
+  var floorTexture = new THREE.ImageUtils.loadTexture( 'images/checkerboard.jpg' );
+  floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+  floorTexture.repeat.set( 10, 10 );
+  //var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+  var floorMaterial = new THREE.MeshPhongMaterial( { color: 0x222222, specular: 0x000000, shininess: 90, shading: THREE.FlatShading, side: THREE.BackSide } )
+  var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+  var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  floor.rotation.x = Math.PI / 2;
+  floor.doubleSided = true;
+  floor.position.y = -15;
+  scene.add(floor);
+  // SKYBOX/FOG
+  var skyBoxGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
+  var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x9999ff, side: THREE.BackSide } );
+  var skyBox = new THREE.Mesh( skyBoxGeometry, skyBoxMaterial );
+  // scene.add(skyBox);
+  scene.fog = new THREE.FogExp2( 0x9999ff, 0.00025 );
+  
+  ////////////
+  // CUSTOM //
+  ////////////
+  
+  /////// draw text on canvas /////////
+
+  // create a canvas element
+  var canvas1 = document.getElementById('c');
+  var context1 = canvas1.getContext('2d');
+    
+  // canvas contents will be used for a texture
+  var texture1 = new THREE.Texture(canvas1) 
+  texture1.needsUpdate = true;
+  //var texture1 = new THREE.TextureLoader().load( "images/checkerboard.jpg" );
+      
+  var material1 = new THREE.MeshBasicMaterial( {map: texture1, side:THREE.DoubleSide } );
+  material1.transparent = true;
+  material1.needsUpdate = true;
+  var material = new THREE.MeshBasicMaterial( {color: 0x0099} );
+
+  var geometry = new THREE.SphereGeometry( 10, 100, 100 );
+  cube = new THREE.Mesh( geometry, material1 );
+
+  cube.position.set(0,0,0);
+  cube.material.map.needsUpdate = true;
+  scene.add( cube );
+
+}
+
+function animate() 
+{
+  requestAnimationFrame( animate );
+  render();   
+  update();
+}
+
+function update()
+{
+  if ( keyboard.pressed("z") ) 
+  { 
+    // do something
+  }
+  
+  controls.update();
+  stats.update();
+}
+
+function render() 
+{
+  renderer.render( scene, camera );
+  cube.material.map.needsUpdate = true;
+}
+
+</script>
+
+</body>
+</html>
+
 
 </body>
 </html>
