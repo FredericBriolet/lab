@@ -20,7 +20,9 @@ Creative research and experiments
 - http://fredericbriolet.com/three/noise1/ <br/>
 -> based on https://www.clicktorelease.com/blog/vertex-displacement-noise-3d-webgl-glsl-three-js
 <br/>
+
 [![Three sphere noise shader](http://fredericbriolet.com/images/noise1.jpg)](http://fredericbriolet.com/three/noise/)
+
 <br/>
 <br/>
 
